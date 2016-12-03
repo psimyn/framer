@@ -1,11 +1,20 @@
-<Renderer />
-<FramerForm />
+<Renderer bind:frame />
+<FramerForm bind:frame />
 
 <script>
   import Renderer from './Renderer.html';
-  import FramerForm from './Form';
+  import FramerForm from './FramerForm.html';
 
   export default {
+    data() {
+      return {
+        frame: {
+          artWidth: 500,
+          artHeight: 500   
+        }
+      }
+    },
+
     components: {
       Renderer,
       FramerForm,

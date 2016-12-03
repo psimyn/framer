@@ -1,13 +1,107 @@
-<canvas></canvas>
+<canvas ref:canvas width='1000' height='1000'></canvas>
 
 <script>
-  export default {
-    name: 'Renderer',
-    data() {
-      return {
-        width: 100,
-        height: 100
-      }
+window.vars = window.vars || {
+  sku: 'mouldingblack',
+}
+
+import { WebGLRenderer, PerspectiveCamera, PCFSoftShadowMap, Scene, SpotLight, SpotLightHelper, PlaneGeometry, BoxGeometry, MeshPhongMaterial, MeshBasicMaterial, Mesh } from 'three'
+import TrackballControls from 'three-trackballcontrols'
+
+export default {
+
+  data() {
+    return {
     }
+  },
+
+  computed: {
+    artWidth: (frame) => {
+      return frame.artWidth
+    }
+  },
+
+  onrender() {
+    let torndown = false
+    this.on('teardown', () => torndown = true)
+
+    const renderer =  new WebGLRenderer({canvas: this.refs.canvas, antialias: true})
+    renderer.shadowMap.type = PCFSoftShadowMap
+    renderer.shadowMap.enabled = true
+    renderer.setClearColor(0xCC9999, 1)
+    const camera = new PerspectiveCamera(75, this.refs.canvas.width / this.refs.canvas.height, 1, 10000)
+    camera.position.z = 500
+    const scene = new Scene()
+    scene.add(camera)
+
+    const geometry = new PlaneGeometry(600, 300, 2)
+    const material = new MeshPhongMaterial({
+      color: 0xfafafa,
+    })
+
+    const wall = new Mesh(geometry, material)
+    wall.receiveShadow = true
+
+    camera.lookAt(wall)
+    scene.add(wall)
+
+    const floorMaterial = new MeshBasicMaterial({
+      color: 0x99dddd,
+      wireframeLinewidth: 2
+    })
+    const floor = new Mesh(geometry, floorMaterial)
+    floor.receiveShadow = true
+    floor.rotation.x = -1 * Math.PI / 2
+    floor.position.y = -150
+    floor.position.z = 150
+    scene.add(floor)
+
+    const mouldingGeo = new BoxGeometry(100, 100, 32)
+    const mouldingMaterial = new MeshPhongMaterial({color:0x333333})
+    const cube = new Mesh(mouldingGeo, mouldingMaterial)
+    cube.position.z = 16
+    cube.castShadow = true
+    scene.add(cube)
+
+    const spotlight = new SpotLight(0xffffff)
+
+    spotlight.shadow.camera.near = 1
+    spotlight.position.set(0, 190, 950)
+    spotlight.angle = 0.5 // width
+    spotlight.penumbra = 0.5 // fade at edges
+    spotlight.intensity = 1.05
+    spotlight.castShadow = true
+    spotlight.shadow.camera.visible = true
+
+    spotlight.shadow.mapSize.width = 1024
+    spotlight.shadow.mapSize.height = 1024
+
+    spotlight.shadow.camera.near = 500
+    spotlight.shadow.camera.far = 5000
+    spotlight.shadow.camera.fov = 130
+    scene.add(spotlight)
+
+    const spotlightHelper = new SpotLightHelper(spotlight)
+    scene.add(spotlightHelper)
+
+    const controls = new TrackballControls(camera, renderer.domElement)
+
+    const loop = () => {
+      if (torndown) return
+      requestAnimationFrame(loop)
+      controls.update()
+      renderer.render(scene, camera)
+    }
+
+    loop()
+
   }
+}
 </script>
+
+<style>
+  canvas {
+    width: 100%;
+    outline: solid 1px rgba(200, 200, 200, 0.8);
+  }
+</style>
