@@ -1,7 +1,7 @@
 {
-  "name": "svelte-todomvc",
+  "name": "framer",
   "version": "1.0.0",
-  "description": "TodoMVC implemented in Svelte",
+  "description": "framer",
   "scripts": {
     "copyfiles": "cp index.html dist/index.html",
     "build": "npm run copyfiles && rollup -c",
@@ -13,23 +13,12 @@
   },
   "files": [
     "index.html",
-    "dist",
-    "node_modules/todomvc-app-css/index.css"
+    "dist"
   ],
   "repository": {
-    "type": "git",
-    "url": "https://github.com/sveltejs/svelte-todomvc.git"
+    "type": "git"
   },
-  "keywords": [
-    "svelte",
-    "todomvc"
-  ],
-  "author": "Rich Harris",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/sveltejs/svelte-todomvc/issues"
-  },
-  "homepage": "https://github.com/sveltejs/svelte-todomvc",
   "dependencies": {
     "aframe": "^0.3.2",
     "rollup": "^0.36.4",

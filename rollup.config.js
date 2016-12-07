@@ -27,5 +27,4 @@ export default {
 	format: 'iife',
 	plugins,
 	sourceMap: true,
-  intro: 'window.TrackballControls = window.TrackballControls || {}'
 }

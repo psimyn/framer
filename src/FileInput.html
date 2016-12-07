@@ -1,0 +1,49 @@
+<div>
+  <input ref:imageInput id="imageInput" class="invisible" type="file" bind:value='image' />
+  <label for="imageInput">{{ label }}</label>
+</div>
+
+<style>
+  .invisible {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+  }
+</style>
+
+<script>
+  export default {
+    data() {
+      return {
+        image: '',
+        imageUrl: '',
+        label: 'Select image',
+      }
+    },
+
+    onrender() {
+      this.observe('image', (image) => {
+        if (!image) return
+        const input = this.refs.imageInput
+        const fileReader = new FileReader()
+        fileReader.readAsDataURL(input.files[0])
+        fileReader.onloadend = (event) => {
+          this.set({imageUrl: event.target.result})
+        }
+      })
+
+      this.observe('imageUrl', (imageUrl) => {
+        const img = document.createElement('img')
+        img.src = imageUrl 
+        img.onload = () => {
+          this.set({
+            imageEl: img
+          })
+        }
+      })
+    }
+  }
+</script>

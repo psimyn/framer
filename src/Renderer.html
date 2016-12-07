@@ -1,12 +1,12 @@
-<canvas ref:canvas width='1000' height='1000'></canvas>
+<canvas ref:canvas class="artwork" width='1000' height='1000'></canvas>
+<canvas ref:wallCanvas class="wall" width='1200' height='1200'></canvas>
 
 <script>
 window.vars = window.vars || {
   sku: 'mouldingblack',
 }
 
-import { WebGLRenderer, PerspectiveCamera, PCFSoftShadowMap, Scene, SpotLight, SpotLightHelper, PlaneGeometry, BoxGeometry, MeshPhongMaterial, MeshBasicMaterial, Mesh } from 'three'
-import TrackballControls from 'three-trackballcontrols'
+import { getMoulding } from './frame.js'
 
 export default {
 
@@ -16,8 +16,11 @@ export default {
   },
 
   computed: {
-    artWidth: (frame) => {
-      return frame.artWidth
+    canvasWidth: (frame) => {
+      return 2 * frame.artWidth
+    },
+    canvasHeight: (frame) => {
+      return 2 * frame.artHeight
     }
   },
 
@@ -25,83 +28,183 @@ export default {
     let torndown = false
     this.on('teardown', () => torndown = true)
 
-    const renderer =  new WebGLRenderer({canvas: this.refs.canvas, antialias: true})
-    renderer.shadowMap.type = PCFSoftShadowMap
-    renderer.shadowMap.enabled = true
-    renderer.setClearColor(0xCC9999, 1)
-    const camera = new PerspectiveCamera(75, this.refs.canvas.width / this.refs.canvas.height, 1, 10000)
-    camera.position.z = 500
-    const scene = new Scene()
-    scene.add(camera)
-
-    const geometry = new PlaneGeometry(600, 300, 2)
-    const material = new MeshPhongMaterial({
-      color: 0xfafafa,
+    this.observe('frame', (frame) => {
+      this.refs.canvas.width = this.refs.canvas.width
+      const ctx = this.refs.canvas.getContext('2d')
+      this.drawArt(frame)
+      if (frame.hasMat)
+        this.drawMat(frame)
+      this.drawMoulding(frame).then(() => {
+        if (frame.wall)
+          this.drawWall(frame)
+      })
     })
+  },
 
-    const wall = new Mesh(geometry, material)
-    wall.receiveShadow = true
+  methods: {
+    center(width, height) {
+      const centerX = this.refs.canvas.width / 2
+      const centerY = this.refs.canvas.height / 2
+      const top = centerY - height / 2
+      const bottom = centerY + height / 2
+      const left = centerX - width / 2
+      const right = centerX + width / 2
+      return {top, bottom, left, right}
+    },
 
-    camera.lookAt(wall)
-    scene.add(wall)
+    drawArt(frame) {
+      const ctx = this.refs.canvas.getContext('2d')
 
-    const floorMaterial = new MeshBasicMaterial({
-      color: 0x99dddd,
-      wireframeLinewidth: 2
-    })
-    const floor = new Mesh(geometry, floorMaterial)
-    floor.receiveShadow = true
-    floor.rotation.x = -1 * Math.PI / 2
-    floor.position.y = -150
-    floor.position.z = 150
-    scene.add(floor)
+      let {top, bottom, left, right} = this.center(frame.artWidth, frame.artHeight)
 
-    const mouldingGeo = new BoxGeometry(100, 100, 32)
-    const mouldingMaterial = new MeshPhongMaterial({color:0x333333})
-    const cube = new Mesh(mouldingGeo, mouldingMaterial)
-    cube.position.z = 16
-    cube.castShadow = true
-    scene.add(cube)
+      ctx.fillStyle = '#999999'
+      ctx.beginPath()
+      ctx.moveTo(left, top)
+      ctx.lineTo(right, top)
+      ctx.lineTo(right, bottom)
+      ctx.lineTo(left, bottom)
+      ctx.closePath()
+      ctx.fill()
+      if (frame.image)
+        ctx.drawImage(frame.image, left, top, frame.artWidth, frame.artHeight)
+    },
 
-    const spotlight = new SpotLight(0xffffff)
+    drawMat(frame) {
+      const ctx = this.refs.canvas.getContext('2d')
+      const art = this.center(frame.artWidth, frame.artHeight)
 
-    spotlight.shadow.camera.near = 1
-    spotlight.position.set(0, 190, 950)
-    spotlight.angle = 0.5 // width
-    spotlight.penumbra = 0.5 // fade at edges
-    spotlight.intensity = 1.05
-    spotlight.castShadow = true
-    spotlight.shadow.camera.visible = true
+      const left = art.left - frame.matSides
+      const right = art.right + frame.matSides
+      const top = art.top - frame.matTop
+      const bottom = art.bottom + frame.matBottom
 
-    spotlight.shadow.mapSize.width = 1024
-    spotlight.shadow.mapSize.height = 1024
+      ctx.fillStyle = '#fff'
+      ctx.beginPath()
 
-    spotlight.shadow.camera.near = 500
-    spotlight.shadow.camera.far = 5000
-    spotlight.shadow.camera.fov = 130
-    scene.add(spotlight)
+      ctx.moveTo(left, top)
+      ctx.lineTo(right, top)
+      ctx.lineTo(right, bottom)
+      ctx.lineTo(left, bottom)
+      ctx.closePath()
+      ctx.moveTo(art.left, art.top)
+      ctx.lineTo(art.left, art.bottom)
+      ctx.lineTo(art.right, art.bottom)
+      ctx.lineTo(art.right, art.top)
+      ctx.closePath()
+      ctx.fill()
 
-    const spotlightHelper = new SpotLightHelper(spotlight)
-    scene.add(spotlightHelper)
+    },
 
-    const controls = new TrackballControls(camera, renderer.domElement)
+    drawWall(frame) {
+      const canvas = this.refs.wallCanvas
+      const art = this.refs.canvas
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(frame.wall, 0, 0, canvas.width, canvas.height)
+      ctx.drawImage(this.refs.canvas, (canvas.width / 2) - art.width / 2, 40, art.width, art.width)  
+    },
 
-    const loop = () => {
-      if (torndown) return
-      requestAnimationFrame(loop)
-      controls.update()
-      renderer.render(scene, camera)
+    createPattern(image, width, rotate) {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      canvas.width = width
+      canvas.height = width
+      ctx.translate(canvas.width / 2, canvas.height / 2)
+      ctx.rotate(rotate * Math.PI / 180)
+      ctx.translate(-canvas.width / 2, -canvas.height / 2)
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+      return ctx.createPattern(canvas, 'repeat')
+    },
+
+    // todo: whoever came up with this function sig should be fired 
+    drawMouldingSide(profile, mouldingImage, rotate, translate, lines) {
+      const ctx = this.refs.canvas.getContext('2d')
+      ctx.save()
+      ctx.beginPath()
+      ctx.shadowColor = 'rgba(66, 55, 55, 0.12)'
+      ctx.shadowOffsetY = 2
+      ctx.shadowBlur = 8
+      ctx.moveTo(lines[0][0], lines[0][1])
+      ctx.lineTo(lines[1][0], lines[1][1])
+      ctx.lineTo(lines[2][0], lines[2][1])
+      ctx.lineTo(lines[3][0], lines[3][1])
+      ctx.closePath()
+      ctx.fillStyle = this.createPattern(mouldingImage, profile, rotate)
+      ctx.translate(translate[0] % profile, translate[1] % profile)
+      ctx.fill()
+      ctx.restore()
+    },
+
+    drawMoulding(frame) {
+      const ctx = this.refs.canvas.getContext('2d')
+      const {width, height, profile, overlap} = getMoulding(frame) 
+
+      const moulding = this.center(Number(frame.artWidth) + 2 * profile, Number(frame.artHeight) + 2 * profile)
+
+      if (frame.hasMat) {
+        moulding.top -= frame.matTop
+        moulding.bottom += frame.matBottom
+        moulding.left -= frame.matSides
+        moulding.right += frame.matSides
+      }
+
+      // TODO: get the tile image from state instead of this garbage
+      return new Promise((resolve, reject) => {
+        const tile = new Image()
+        tile.src = 'tile.jpg'
+        tile.onload = () => {
+          // left side
+          this.drawMouldingSide(profile, tile, 0, [moulding.left, 0], [
+            [moulding.left, moulding.top],
+            [moulding.left + profile, moulding.top + profile],
+            [moulding.left + profile, moulding.bottom - profile],
+            [moulding.left, moulding.bottom]
+          ])
+
+          // top
+          this.drawMouldingSide(profile, tile, 90, [0, moulding.top], [
+            [moulding.left, moulding.top],
+            [moulding.right, moulding.top],
+            [moulding.right - profile, moulding.top + profile],
+            [moulding.left + profile, moulding.top + profile]
+          ])
+
+          // right 
+          this.drawMouldingSide(profile, tile, 180, [moulding.right, 0], [
+            [moulding.right, moulding.top],
+            [moulding.right, moulding.bottom],
+            [moulding.right - profile, moulding.bottom - profile],
+            [moulding.right - profile, moulding.top + profile]
+          ])
+
+          this.drawMouldingSide(profile, tile, 270, [0, moulding.bottom], [
+            [moulding.right, moulding.bottom],
+            [moulding.left, moulding.bottom],
+            [moulding.left + profile, moulding.bottom - profile],
+            [moulding.right - profile, moulding.bottom - profile]
+          ])
+          resolve()
+        }
+        tile.onerror = function() {
+          // TODO: placeholder frame??
+        }
+      })
     }
-
-    loop()
-
   }
 }
 </script>
 
 <style>
   canvas {
-    width: 100%;
+    position: static; left: 0; top: 0;
     outline: solid 1px rgba(200, 200, 200, 0.8);
+  }
+
+  .wall {
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
+  .artwork {
+    display: none;
   }
 </style>

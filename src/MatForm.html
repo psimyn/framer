@@ -1,0 +1,54 @@
+<input id="hasMat" type='checkbox' class="invisible" bind:checked='frame.hasMat' />
+<label for="hasMat">{{ frame.hasMat ? 'Remove' : 'Add' }} matboard</label>
+<div class="mat-section">
+  <div class="inline">
+    <div>
+      <label>Top</label>
+      <input type="number" bind:value='frame.matTop' /> 
+    </div>
+    <div>
+      <label>Sides</label>
+      <input type="number" bind:value='frame.matSides' /> 
+    </div>
+    <div>
+      <label>Bottom</label>
+      <input type="number" bind:value='frame.matBottom' /> 
+    </div>
+  </div>
+</div>
+
+<style>
+  label {
+    display: block;
+  }
+
+  .mat-section {
+    max-height: 0;
+    overflow: hidden;
+  }
+
+  .inline {
+    display: flex;
+  }
+
+  .inline > * {
+    margin: 0 12px;
+  }
+
+  #hasMat:checked ~ .mat-section {
+    max-height: 600px;
+
+  }
+
+</style>
+
+<script>
+  export default {
+    data() {
+      return {
+        frame: {
+        }
+      }
+    }
+  }
+</script>
